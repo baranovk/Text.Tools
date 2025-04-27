@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\submodules\UserInterface.Console.Generic\submodules\Functional\src\Functional\Functional.csproj" />
+    <ProjectReference Include="..\TextAnalysis.Interfaces\TextAnalysis.Interfaces.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Text.Tools.Tests.Unit" />
+  </ItemGroup>
+
+</Project>

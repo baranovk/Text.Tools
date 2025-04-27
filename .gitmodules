@@ -1,0 +1,3 @@
+[submodule "submodules/UserInterface.Console.Generic"]
+	path = submodules/UserInterface.Console.Generic
+	url = https://github.com/baranovk/UserInterface.Console.Generic

@@ -1,0 +1,14 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+## run all tasks
+#husky run
+
+## run task with name: 'task-name'
+#husky run --name task-name
+
+## pass hook arguments to task
+#husky run --args "$1" "$2"
+
+echo 'Running pre-commit hook...'
+dotnet husky run --group pre-commit
