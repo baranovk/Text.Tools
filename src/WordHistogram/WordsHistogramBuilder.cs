@@ -15,9 +15,9 @@ public static class WordsHistogramBuilder
     public static async Task<IEnumerable<HistogramBucket>> BuildAsync(
         ITextProvider textProvider,
         Action<string> log,
+        int maxLevenshteinDistance = 3,
         CancellationToken cancellationToken = default)
     {
-        const int maxLevenshteinDistance = 3;
         ConcurrentBag<IEnumerable<WordCluster>> wordClusterBag = [];
 
         await Parallel.ForEachAsync(
@@ -27,25 +27,25 @@ public static class WordsHistogramBuilder
             {
                 await TryAsync(() => source(ct))
                     .RunAsync()
-                    .Bind(fileReadResultEx
-                            => fileReadResultEx.Match(
-                                    ex =>
-                                    {
-                                        log(ex.ToString());
-                                        return Async<Unit>(new());
-                                    },
-                                    text =>
-                                    {
-                                        wordClusterBag.Add(
-                                            text.Split(' ')
-                                                .Select(s => s.Trim('.', ',', ':', '(', ')').ToLower(CultureInfo.CurrentCulture))
-                                                .Where(s => _wordRegex.IsMatch(s))
-                                                .GroupByLevenshteinDistance(maxLevenshteinDistance)
-                                        );
+                    .Bind(textEx
+                            => textEx.Match(
+                                ex =>
+                                {
+                                    log(ex.ToString());
+                                    return Async<Unit>(new());
+                                },
+                                text =>
+                                {
+                                    wordClusterBag.Add(
+                                        text.Split(' ')
+                                            .Select(s => s.Trim('.', ',', ':', '(', ')').ToLower(CultureInfo.CurrentCulture))
+                                            .Where(s => _wordRegex.IsMatch(s))
+                                            .GroupByLevenshteinDistance(maxLevenshteinDistance)
+                                    );
 
-                                        return Async<Unit>(new());
-                                    }
-                                )
+                                    return Async<Unit>(new());
+                                }
+                            )
                     ).ConfigureAwait(false);
             }
         ).ConfigureAwait(false);
