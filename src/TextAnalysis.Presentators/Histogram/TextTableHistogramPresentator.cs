@@ -7,7 +7,7 @@ namespace TextAnalysis.Presentators.Histogram;
 
 public class TextTableHistogramPresentator(int rowWidthInChars) : IHistogramPresentator
 {
-    public async Task VisualizeTo(Stream output, IReadOnlyCollection<HistogramBucket> buckets, CancellationToken cancellationToken)
+    public async Task VisualizeTo(Stream output, IReadOnlyCollection<HistogramBucket> buckets, CancellationToken cancellationToken = default)
     {
         if (0 == buckets.Count) { return; }
 
