@@ -19,17 +19,27 @@ internal sealed class WordHistogramScenario : StatefullInteractionScenario<WordH
     public override async Task<Context> Execute(Context context)
         => State switch
         {
-            WordHistogramScenarioState.GetFilesForAnalysisPath => await GetFileSystemPath(context, Resources.EnterPathToFilesForAnalysis,
+            WordHistogramScenarioState.GetFilesForAnalysisPath => await TryAsync(
+                () => GetFileSystemPath(context, Resources.EnterPathToFilesForAnalysis,
                     (ctx, path) => ctx with { CurrentScenario = SetFilesForAnalysisPath(path).SetState(WordHistogramScenarioState.GetHistogramPath) }
-                ).ConfigureAwait(false),
-            WordHistogramScenarioState.GetHistogramPath => await GetFileSystemPath(context, Resources.EnterPathToHistogram,
+                ))
+                .RunAsync()
+                .Bind(exceptional => exceptional.Match(ex => Async(HandleError(context, ex)), ctx => Async(ctx)))
+                .ConfigureAwait(false),
+
+            WordHistogramScenarioState.GetHistogramPath => await TryAsync(
+                () => GetFileSystemPath(context, Resources.EnterPathToHistogram,
                     (ctx, path) => ctx with { CurrentScenario = SetHistogramPath(path).SetState(WordHistogramScenarioState.BuildHistogram) }
-                ).ConfigureAwait(false),
+                ))
+                .RunAsync()
+                .Bind(exceptional => exceptional.Match(ex => Async(HandleError(context, ex)), ctx => Async(ctx)))
+                .ConfigureAwait(false),
+
             WordHistogramScenarioState.BuildHistogram => await BuildHistogram(context).ConfigureAwait(false),
             _ => throw new InvalidOperationException()
         };
 
-    private static async Task<Context> GetFileSystemPath(Context context, string prompt, Func<Context, string, Context> onValidFileSystemPathEntered)
+    private async Task<Context> GetFileSystemPath(Context context, string prompt, Func<Context, string, Context> onValidFileSystemPathEntered)
         => await (await context.UI
                     .WriteEmpty()
                     .WriteMessage(prompt)
@@ -42,11 +52,7 @@ internal sealed class WordHistogramScenario : StatefullInteractionScenario<WordH
                 input => input switch
                 {
                     TextInput txtInput => txtInput.IsQuitKey()
-                                            ? Async(context with
-                                            {
-                                                CurrentScenario = new MainInteractionScenario()
-                                            })
-                                            : Async(onValidFileSystemPathEntered(context, txtInput.Value)),
+                                            ? Async(OnFinish(context)) : Async(onValidFileSystemPathEntered(context, txtInput.Value)),
                     _ => throw new InvalidOperationException()
                 }
             ).ConfigureAwait(false);
@@ -59,7 +65,7 @@ internal sealed class WordHistogramScenario : StatefullInteractionScenario<WordH
                     using var fs = new FileStream(_histogramPath!, FileMode.CreateNew);
                     await new TextTableHistogramPresentator(500).VisualizeTo(fs, histogramBuckets.ToList()).ConfigureAwait(false);
                     context.UI.WriteEmpty().WriteMessage(Resources.HistogramGenerated);
-                    return context with { CurrentScenario = new MainInteractionScenario() };
+                    return OnFinish(context);
                 });
 
     private static Task<Validation<UserInput>> ValidateFileSystemPath(UserInput input)
@@ -73,8 +79,14 @@ internal sealed class WordHistogramScenario : StatefullInteractionScenario<WordH
             _ => Async(Validation<UserInput>.Fail(new ValidationError(Resources.InvalidDirectoryPath)))
         };
 
-    private static Context HandleError(Context context, Exception ex)
-        => context.UI.WriteEmpty().WriteMessage(ex.Message).Pipe(_ => context with { CurrentScenario = new MainInteractionScenario() });
+    private Context HandleError(Context context, Exception ex)
+        => context.UI.WriteEmpty()
+                     .WriteMessage(ex.Message)
+                     .Pipe(_ => OnFinish(context));
+
+    private Context OnFinish(Context context)
+        => SetState(WordHistogramScenarioState.GetFilesForAnalysisPath)
+            .Pipe(_ => context with { CurrentScenario = new MainInteractionScenario() });
 
     private WordHistogramScenario SetFilesForAnalysisPath(string path)
     {
