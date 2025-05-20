@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Functional;
 using TextAnalysis.Presentators.Histogram;
 using UserInterface.Console.Generic;
@@ -19,25 +20,26 @@ internal sealed class WordHistogramScenario : StatefullInteractionScenario<WordH
     public override async Task<Context> Execute(Context context)
         => State switch
         {
-            WordHistogramScenarioState.GetFilesForAnalysisPath => await TryAsync(
+            WordHistogramScenarioState.GetFilesForAnalysisPath => await ExecuteState(
                 () => GetFileSystemPath(context, Resources.EnterPathToFilesForAnalysis,
                     (ctx, path) => ctx with { CurrentScenario = SetFilesForAnalysisPath(path).SetState(WordHistogramScenarioState.GetHistogramPath) }
-                ))
-                .RunAsync()
-                .Bind(exceptional => exceptional.Match(ex => Async(HandleError(context, ex)), ctx => Async(ctx)))
-                .ConfigureAwait(false),
+                ), context).ConfigureAwait(false),
 
-            WordHistogramScenarioState.GetHistogramPath => await TryAsync(
+            WordHistogramScenarioState.GetHistogramPath => await ExecuteState(
                 () => GetFileSystemPath(context, Resources.EnterPathToHistogram,
                     (ctx, path) => ctx with { CurrentScenario = SetHistogramPath(path).SetState(WordHistogramScenarioState.BuildHistogram) }
-                ))
-                .RunAsync()
-                .Bind(exceptional => exceptional.Match(ex => Async(HandleError(context, ex)), ctx => Async(ctx)))
-                .ConfigureAwait(false),
+                ), context).ConfigureAwait(false),
 
-            WordHistogramScenarioState.BuildHistogram => await BuildHistogram(context).ConfigureAwait(false),
+            WordHistogramScenarioState.BuildHistogram => await ExecuteState(() => BuildHistogram(context), context).ConfigureAwait(false),
+
             _ => throw new InvalidOperationException()
         };
+
+    private async Task<Context> ExecuteState(Func<Task<Context>> action, Context context)
+        => await TryAsync(action)
+                    .RunAsync()
+                    .Bind(exceptional => exceptional.Match(ex => Async(HandleError(context, ex)), ctx => Async(ctx)))
+                    .ConfigureAwait(false);
 
     private async Task<Context> GetFileSystemPath(Context context, string prompt, Func<Context, string, Context> onValidFileSystemPathEntered)
         => await (await context.UI
@@ -62,8 +64,8 @@ internal sealed class WordHistogramScenario : StatefullInteractionScenario<WordH
                 .BuildAsync(new TextProvider.File.TextProvider(_filesPath!), System.Console.WriteLine)
                 .Bind(async histogramBuckets =>
                 {
-                    using var fs = new FileStream(_histogramPath!, FileMode.CreateNew);
-                    await new TextTableHistogramPresentator(500).VisualizeTo(fs, histogramBuckets.ToList()).ConfigureAwait(false);
+                    using var fs = new FileStream(Path.Combine(_histogramPath!, GenerateHistogramFileName()), FileMode.CreateNew);
+                    await new TextTableHistogramPresentator(50).VisualizeTo(fs, histogramBuckets.ToList()).ConfigureAwait(false);
                     context.UI.WriteEmpty().WriteMessage(Resources.HistogramGenerated);
                     return OnFinish(context);
                 });
@@ -81,7 +83,7 @@ internal sealed class WordHistogramScenario : StatefullInteractionScenario<WordH
 
     private Context HandleError(Context context, Exception ex)
         => context.UI.WriteEmpty()
-                     .WriteMessage(ex.Message)
+                     .WriteMessage($"Ошибка: {ex.Message}")
                      .Pipe(_ => OnFinish(context));
 
     private Context OnFinish(Context context)
@@ -99,6 +101,9 @@ internal sealed class WordHistogramScenario : StatefullInteractionScenario<WordH
         _histogramPath = path;
         return this;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string GenerateHistogramFileName() => $"{DateTime.Now:yyyyMMddHHmmss}_word_histogram.txt";
 }
 
 internal enum WordHistogramScenarioState { GetFilesForAnalysisPath, GetHistogramPath, BuildHistogram }

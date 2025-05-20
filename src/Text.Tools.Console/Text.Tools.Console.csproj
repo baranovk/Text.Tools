@@ -8,6 +8,10 @@
     <NeutralLanguage>ru-RU</NeutralLanguage>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <WarningsNotAsErrors></WarningsNotAsErrors>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\submodules\UserInterface.Console.Generic\src\UserInterface.Console.Generic\UserInterface.Console.Generic.csproj" />
     <ProjectReference Include="..\TextAnalysis.Presentators\TextAnalysis.Presentators.csproj" />

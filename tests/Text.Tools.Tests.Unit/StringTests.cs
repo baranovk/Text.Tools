@@ -6,7 +6,7 @@ namespace Text.Tools.Tests.Unit;
 internal sealed class StringTests
 {
     [Test]
-    public void Strings_Should_BeGrouppedByLevenshteinDistance()
+    public void Strings_Should_BeGrouppedByLevenshteinDistance_0()
     {
         const int maxDistance = 1;
         var firstCluster = new List<string>() { "AAA", "AAB", "AAC" };

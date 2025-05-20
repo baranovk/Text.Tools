@@ -38,11 +38,11 @@ public class TextTableHistogramPresentator(int rowWidthInChars) : IHistogramPres
                             {
                                 sb.Append(CultureInfo.CurrentCulture, $"{key}");
                                 sb.Append(' ', rowWidthInChars - key.Length - size.Length);
-                                sb.Append(size.PadLeft(sizeLength));
+                                sb.Append(CultureInfo.CurrentCulture, $"{size.PadLeft(sizeLength)}\r\n");
                                 size = string.Empty;
                             }
 
-                            sb.Append(separator);
+                            sb.Append(CultureInfo.CurrentCulture, $"{separator}\r\n");
                             return sb;
                         }
                     )

@@ -9,16 +9,25 @@ internal static class GroupingExtensions
                     .Pipe(comparer => words
                                         .Select(s => new ClusterItem<string>(s))
                                         .OrderBy(s => s, comparer)
+                                        .Select(s => s.SetUniqueKey())
                                         .GroupBy(i => i.ClusterKey)
-                                        .Select(g => new WordCluster(g.Select(i => i.Value).ToList(), g.Count())));
+                                        .Select(g => new WordCluster(g.Select(i => i.Value).Distinct().ToList(), g.Count())));
 
     public static IEnumerable<WordCluster> GroupBySimilarity(this IEnumerable<WordCluster> clusters, int maxLevenshteinDistance)
         => new ComparerBySimilarity(maxLevenshteinDistance)
                 .Pipe(comparer => clusters
                                     .Select(c => new ClusterItem<WordCluster>(c))
                                     .OrderBy(s => s, comparer)
+                                    .Select(s => s.SetUniqueKey())
                                     .GroupBy(i => i.ClusterKey)
-                                    .Select(g => new WordCluster(g.SelectMany(_ => _.Value.Words).ToList(), g.Sum(_ => _.Value.ClusterSize))));
+                                    .Select(g => new WordCluster(g.SelectMany(_ => _.Value.Words).Distinct().ToList(),
+                                        g.Sum(_ => _.Value.ClusterSize))));
+
+    private static ClusterItem<T> SetUniqueKey<T>(this ClusterItem<T> item)
+    {
+        item.ClusterKey = item.ClusterKey == Guid.Empty ? Guid.NewGuid() : item.ClusterKey;
+        return item;
+    }
 
     private static int CalculateLevenshteinDistance(string source, string target)
     {

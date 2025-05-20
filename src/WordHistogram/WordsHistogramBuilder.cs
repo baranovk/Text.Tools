@@ -10,12 +10,12 @@ namespace WordHistogram;
 
 public static class WordsHistogramBuilder
 {
-    private static readonly Regex _wordRegex = new(@"^[A-ZА-Я\-]$", RegexOptions.Compiled);
+    private static readonly Regex _wordRegex = new(@"^[A-ZА-Яa-zа-я\-]{3,}$", RegexOptions.Compiled);
 
     public static async Task<IEnumerable<HistogramBucket>> BuildAsync(
         ITextProvider textProvider,
         Action<string> log,
-        int maxLevenshteinDistance = 3,
+        int maxLevenshteinDistance = 2,
         CancellationToken cancellationToken = default)
     {
         ConcurrentBag<IEnumerable<WordCluster>> wordClusterBag = [];
